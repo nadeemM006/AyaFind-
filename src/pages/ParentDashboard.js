@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabase';
 import BookingFlow from './BookingFlow';
+import FindCare from './FindCare';
 import { parseCareRequest, parseTimeOfDay, formatTimeOfDay } from '../utils/parseCareRequest';
 
 /* ═══════════════════════════════════════════════════════
@@ -407,8 +408,6 @@ function ParentDashboard() {
   const [ayas, setAyas] = useState([]);
   const [rankings, setRankings] = useState({});
   const [ayasLoading, setAyasLoading] = useState(true);
-  const [summaries, setSummaries] = useState({});
-  const summariesStarted = useRef(false);
 
   /* Bookings — null while loading */
   const [bookings, setBookings] = useState(null);
@@ -539,30 +538,7 @@ function ParentDashboard() {
     const v = searchParams.get('view');
     setView(VIEWS.includes(v) ? v : 'home');
   }, [searchParams]);
-
-  /* AI safety summaries load lazily, only when Find Care is opened */
-  useEffect(() => {
-    if (view !== 'find-care' || summariesStarted.current || !ayas.length) return;
-    summariesStarted.current = true;
-    ayas.forEach(async (a) => {
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/aya-summary`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ aya: a }),
-        });
-        const result = await res.json();
-        const ok = result && result.success && typeof result.summary === 'string' && result.summary.trim();
-        setSummaries((prev) => ({
-          ...prev,
-          [a.id]: ok ? result.summary.trim() : 'AI safety summary isn’t available right now.',
-        }));
-      } catch {
-        setSummaries((prev) => ({ ...prev, [a.id]: 'AI safety summary isn’t available right now.' }));
-      }
-    });
-  }, [view, ayas]);
-
+  
   /* Escape closes the topmost layer; lock body scroll behind overlays */
   useEffect(() => {
     const onKey = (e) => {
@@ -1094,41 +1070,14 @@ function ParentDashboard() {
     );
   }
 
-  const rankedByAI = Object.keys(rankings).length > 0;
-
   const findCareView = (
-    <div>
-      <header className="pd-view-head">
-        <h1 className="pd-view-title">Find Care</h1>
-        <p className="pd-view-sub">
-          {rankedByAI
-            ? 'Verified caregivers on AyaFind, ranked by AI for your family.'
-            : 'Verified caregivers on AyaFind.'}
-        </p>
-      </header>
-      {ayasLoading ? (
-        <div className="pd-ayagrid">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="pd-card pd-skel-card">
-              <div className="pd-skel pd-skel-lg" />
-              <div className="pd-skel pd-skel-row" />
-              <div className="pd-skel pd-skel-row" />
-              <div className="pd-skel pd-skel-sm" />
-            </div>
-          ))}
-        </div>
-      ) : ayas.length ? (
-        <div className="pd-ayagrid">
-          {ayas.map((a) => (
-            <AyaCard key={a.id} aya={a} summary={summaries[a.id]} onBook={() => setBookingAya(a)} />
-          ))}
-        </div>
-      ) : (
-        <div className="pd-card pd-empty-inline">
-          <p className="pd-section-sub">No caregivers are available right now. Please check back soon.</p>
-        </div>
-      )}
-    </div>
+    <FindCare
+      ayas={ayas}
+      rankings={rankings}
+      profile={profile}
+      profileLoading={booting}
+      onBook={(aya) => setBookingAya(aya)}
+    />
   );
 
   return (
