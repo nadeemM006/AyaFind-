@@ -1,9 +1,11 @@
+import BookingFlow from './BookingFlow';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 
 const BACKEND_URL = 'https://ayafind-production.up.railway.app';
 
 function ParentDashboard() {
+  const [selectedAya, setSelectedAya] = useState(null);
   const [ayas, setAyas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
@@ -80,28 +82,9 @@ function ParentDashboard() {
     window.location.href = '/';
   };
 
-  const handleBook = async (ayaId) => {
-    const { data: userData } = await supabase.auth.getUser();
-    const { data: parentData } = await supabase
-      .from('parents')
-      .select('id')
-      .eq('email', userData.user.email)
-      .single();
-
-    const { error } = await supabase
-      .from('bookings')
-      .insert([{
-        parent_id: parentData.id,
-        aya_id: ayaId,
-        status: 'pending',
-        date: new Date().toISOString().split('T')[0],
-        time: new Date().toLocaleTimeString(),
-      }]);
-
-    if (!error) alert('✅ Booking request sent!');
-    else alert('❌ Booking failed: ' + error.message);
+  const handleBook = (aya) => {
+    setSelectedAya(aya);
   };
-
   return (
     <div style={styles.container}>
       <style>{`
@@ -156,7 +139,9 @@ function ParentDashboard() {
                     {aya.ai_summary || 'Generating AI summary...'}
                   </p>
                 </div>
-                <button style={styles.bookBtn} onClick={() => handleBook(aya.id)}>
+                <button
+                  style={styles.bookBtn}
+                  onClick={() => handleBook(aya)}>
                   Book Now
                 </button>
               </div>
@@ -164,44 +149,72 @@ function ParentDashboard() {
           </div>
         )}
       </div>
+      {selectedAya && (
+        <BookingFlow
+          aya={selectedAya}
+          onClose={() => setSelectedAya(null)}
+          onSuccess={() => {
+            setSelectedAya(null);
+            alert('✅ Booking confirmed!');
+          }}
+        />
+      )}
     </div>
   );
 }
 
 const styles = {
   container: { minHeight: '100vh', background: '#f8fafc', fontFamily: 'Segoe UI, sans-serif' },
-  nav: { display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    padding: '16px 40px', background: '#0D7377', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' },
+  nav: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    padding: '16px 40px', background: '#0D7377', boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+  },
   logo: { color: 'white', margin: 0, fontSize: '22px' },
   navRight: { display: 'flex', alignItems: 'center', gap: '12px' },
   welcome: { color: 'white', fontSize: '14px' },
-  logoutBtn: { background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none',
-    padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' },
-  header: { background: 'linear-gradient(135deg, #0D7377, #14BDAC)',
-    color: 'white', textAlign: 'center', padding: '40px 20px' },
+  logoutBtn: {
+    background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none',
+    padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px'
+  },
+  header: {
+    background: 'linear-gradient(135deg, #0D7377, #14BDAC)',
+    color: 'white', textAlign: 'center', padding: '40px 20px'
+  },
   headerTitle: { fontSize: '28px', margin: '0 0 8px' },
   headerSub: { opacity: 0.9, margin: 0, fontSize: '15px' },
   content: { padding: '32px 40px' },
   loading: { textAlign: 'center', color: '#64748b', fontSize: '18px', marginTop: '40px' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' },
-  card: { background: 'white', borderRadius: '16px', padding: '28px',
-    boxShadow: '0 2px 12px rgba(0,0,0,0.08)', textAlign: 'center' },
-  avatar: { width: '64px', height: '64px', borderRadius: '50%', background: '#0D7377',
+  card: {
+    background: 'white', borderRadius: '16px', padding: '28px',
+    boxShadow: '0 2px 12px rgba(0,0,0,0.08)', textAlign: 'center'
+  },
+  avatar: {
+    width: '64px', height: '64px', borderRadius: '50%', background: '#0D7377',
     color: 'white', fontSize: '28px', fontWeight: 'bold', display: 'flex',
-    alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' },
+    alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px'
+  },
   ayaName: { margin: '0 0 4px', color: '#1a1a2e', fontSize: '18px' },
   ayaLocation: { color: '#64748b', margin: '0 0 12px', fontSize: '14px' },
-  trustBadge: { background: '#E8F8F7', color: '#0D7377', padding: '6px 12px',
+  trustBadge: {
+    background: '#E8F8F7', color: '#0D7377', padding: '6px 12px',
     borderRadius: '20px', fontSize: '13px', fontWeight: 'bold',
-    display: 'inline-block', marginBottom: '12px' },
-  details: { display: 'flex', justifyContent: 'center', gap: '16px',
-    marginBottom: '12px', fontSize: '13px', color: '#64748b' },
-  aiSummaryBox: { background: '#F0FDF4', borderRadius: '8px',
-    padding: '10px 14px', marginBottom: '16px', textAlign: 'left' },
+    display: 'inline-block', marginBottom: '12px'
+  },
+  details: {
+    display: 'flex', justifyContent: 'center', gap: '16px',
+    marginBottom: '12px', fontSize: '13px', color: '#64748b'
+  },
+  aiSummaryBox: {
+    background: '#F0FDF4', borderRadius: '8px',
+    padding: '10px 14px', marginBottom: '16px', textAlign: 'left'
+  },
   aiSummaryLabel: { color: '#0D7377', fontSize: '11px', fontWeight: 'bold', margin: '0 0 4px' },
   aiSummaryText: { color: '#374151', fontSize: '12px', lineHeight: '1.6', margin: 0 },
-  bookBtn: { width: '100%', padding: '12px', background: '#0D7377', color: 'white',
-    border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' },
+  bookBtn: {
+    width: '100%', padding: '12px', background: '#0D7377', color: 'white',
+    border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer'
+  },
 };
 
 export default ParentDashboard;
