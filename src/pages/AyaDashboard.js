@@ -10,9 +10,9 @@ function AyaDashboard() {
     fetchProfile();
   }, []);
 
-const fetchProfile = async () => {
+  const fetchProfile = async () => {
     const { data: userData } = await supabase.auth.getUser();
-    
+
     if (!userData.user) {
       window.location.href = '/login';
       return;
@@ -65,29 +65,43 @@ const fetchProfile = async () => {
 
   return (
     <div style={styles.container}>
+      <style>{`
+        @media (max-width: 768px) {
+          .ad-nav { padding: 12px 16px !important; }
+          .ad-content { padding: 16px !important; }
+          .ad-profile-card { flex-direction: column !important; text-align: center !important; }
+          .ad-profile-info { text-align: center !important; }
+          .ad-availability { margin-top: 12px !important; }
+          .ad-booking-card { flex-direction: column !important; }
+          .ad-action-btns { flex-direction: row !important; width: 100% !important; }
+          .ad-action-btns button { flex: 1 !important; }
+          .ad-welcome { display: none !important; }
+        }
+      `}</style>
+
       {/* Navbar */}
-      <nav style={styles.nav}>
+      <nav style={styles.nav} className="ad-nav">
         <h1 style={styles.logo}>🍃 AyaFind</h1>
         <div style={styles.navRight}>
-          <span style={styles.welcome}>👩 {profile?.name}</span>
+          <span style={styles.welcome} className="ad-welcome">👩 {profile?.name}</span>
           <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
         </div>
       </nav>
 
-      <div style={styles.content}>
+      <div style={styles.content} className="ad-content">
         {/* Profile Card */}
-        <div style={styles.profileCard}>
+        <div style={styles.profileCard} className="ad-profile-card">
           <div style={styles.avatar}>
             {profile?.name?.charAt(0).toUpperCase()}
           </div>
-          <div style={styles.profileInfo}>
+          <div style={styles.profileInfo} className="ad-profile-info">
             <h2 style={styles.profileName}>{profile?.name}</h2>
             <p style={styles.profileDetail}>📍 {profile?.location}</p>
             <p style={styles.profileDetail}>⏳ {profile?.experience_years} years experience</p>
             <p style={styles.profileDetail}>💰 PKR {profile?.rate_per_hour}/hr</p>
             <div style={styles.trustBadge}>🛡️ Trust Score: {profile?.trust_score}/100</div>
           </div>
-          <div style={styles.availabilitySection}>
+          <div style={styles.availabilitySection} className="ad-availability">
             <p style={styles.availLabel}>Availability</p>
             <button
               onClick={handleAvailability}
@@ -106,7 +120,7 @@ const fetchProfile = async () => {
         ) : (
           <div style={styles.bookingsList}>
             {bookings.map((booking) => (
-              <div key={booking.id} style={styles.bookingCard}>
+              <div key={booking.id} style={styles.bookingCard} className="ad-booking-card">
                 <div style={styles.bookingInfo}>
                   <h4 style={styles.parentName}>
                     👨‍👩‍👧 {booking.parents?.name || 'Parent'}
@@ -126,7 +140,7 @@ const fetchProfile = async () => {
                     {booking.status.toUpperCase()}
                   </span>
                   {booking.status === 'pending' && (
-                    <div style={styles.actionBtns}>
+                    <div style={styles.actionBtns} className="ad-action-btns">
                       <button
                         style={styles.acceptBtn}
                         onClick={() => handleBookingAction(booking.id, 'confirmed')}>
@@ -156,19 +170,19 @@ const styles = {
   nav: { display: 'flex', justifyContent: 'space-between', alignItems: 'center',
     padding: '16px 40px', background: '#0D7377' },
   logo: { color: 'white', margin: 0, fontSize: '22px' },
-  navRight: { display: 'flex', alignItems: 'center', gap: '16px' },
+  navRight: { display: 'flex', alignItems: 'center', gap: '12px' },
   welcome: { color: 'white', fontSize: '14px' },
   logoutBtn: { background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none',
-    padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' },
-  content: { padding: '32px 40px' },
-  profileCard: { background: 'white', borderRadius: '16px', padding: '28px',
+    padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' },
+  content: { padding: '24px 40px' },
+  profileCard: { background: 'white', borderRadius: '16px', padding: '24px',
     boxShadow: '0 2px 12px rgba(0,0,0,0.08)', display: 'flex',
-    alignItems: 'center', gap: '24px', marginBottom: '32px', flexWrap: 'wrap' },
-  avatar: { width: '80px', height: '80px', borderRadius: '50%', background: '#0D7377',
-    color: 'white', fontSize: '32px', fontWeight: 'bold', display: 'flex',
+    alignItems: 'center', gap: '24px', marginBottom: '28px', flexWrap: 'wrap' },
+  avatar: { width: '72px', height: '72px', borderRadius: '50%', background: '#0D7377',
+    color: 'white', fontSize: '30px', fontWeight: 'bold', display: 'flex',
     alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   profileInfo: { flex: 1 },
-  profileName: { margin: '0 0 8px', color: '#1a1a2e', fontSize: '22px' },
+  profileName: { margin: '0 0 8px', color: '#1a1a2e', fontSize: '20px' },
   profileDetail: { margin: '0 0 4px', color: '#64748b', fontSize: '14px' },
   trustBadge: { display: 'inline-block', background: '#E8F8F7', color: '#0D7377',
     padding: '4px 12px', borderRadius: '20px', fontSize: '13px',
@@ -176,22 +190,23 @@ const styles = {
   availabilitySection: { textAlign: 'center' },
   availLabel: { color: '#64748b', fontSize: '13px', margin: '0 0 8px' },
   availableBtn: { background: '#D4EDDA', color: '#155724', border: 'none',
-    padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
+    padding: '10px 20px', borderRadius: '8px', cursor: 'pointer',
+    fontWeight: 'bold', width: '100%' },
   unavailableBtn: { background: '#F8D7DA', color: '#721C24', border: 'none',
-    padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
+    padding: '10px 20px', borderRadius: '8px', cursor: 'pointer',
+    fontWeight: 'bold', width: '100%' },
   sectionTitle: { color: '#1a1a2e', fontSize: '20px', marginBottom: '16px' },
   emptyState: { background: 'white', borderRadius: '12px', padding: '40px',
     textAlign: 'center', color: '#64748b', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' },
   bookingsList: { display: 'flex', flexDirection: 'column', gap: '16px' },
-  bookingCard: { background: 'white', borderRadius: '12px', padding: '24px',
+  bookingCard: { background: 'white', borderRadius: '12px', padding: '20px',
     boxShadow: '0 2px 12px rgba(0,0,0,0.08)', display: 'flex',
     justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' },
   bookingInfo: { flex: 1 },
   parentName: { margin: '0 0 8px', color: '#1a1a2e', fontSize: '16px' },
   bookingDetail: { margin: '0 0 4px', color: '#64748b', fontSize: '13px' },
   bookingActions: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' },
-  statusBadge: { padding: '4px 12px', borderRadius: '20px',
-    fontSize: '12px', fontWeight: 'bold' },
+  statusBadge: { padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' },
   actionBtns: { display: 'flex', gap: '8px', marginTop: '8px' },
   acceptBtn: { background: '#0D7377', color: 'white', border: 'none',
     padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
