@@ -1,5 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { formatTimeOfDay, parseTimeOfDay } from '../utils/parseCareRequest';
+
+const BACKEND_URL = 'https://ayafind-production.up.railway.app';
 
 /* ═══════════════════════════════════════════════════════
    MY BOOKINGS — premium care-management experience
@@ -110,13 +112,14 @@ const timelineState = (status) => {
 /* ═══════════════════════════════════════════════════════
    BOOKING CARD
    ═══════════════════════════════════════════════════════ */
-function BookingCard({ booking, tab, onView, onBookAgain, onMessageAya }) {
+function BookingCard({ booking, tab, onView, onBookAgain, onMessageAya, payment }) {
   const aya = booking.ayas || {};
   const st = statusStyle(booking.status);
   const time = formatTimeOfDay(booking.time);
-  const endTime = addHoursToTime(booking.time, EST_DURATION);
+  const bkDuration = booking.duration || EST_DURATION;
+  const endTime = addHoursToTime(booking.time, bkDuration);
   const rate = aya.rate_per_hour || 0;
-  const total = rate * EST_DURATION;
+  const total = rate * bkDuration;
   const isPast = tab === 'past';
 
   return (
@@ -131,7 +134,7 @@ function BookingCard({ booking, tab, onView, onBookAgain, onMessageAya }) {
           <h3 className="mb-card-name">{aya.name || 'Your Caregiver'}</h3>
           <p className="mb-card-type">{careTypeFor()}</p>
           <div className="mb-card-meta">
-            {EST_DURATION} hours
+            {bkDuration} hours
             {aya.location && <><span className="mb-dot" />{aya.location}</>}
           </div>
         </div>
@@ -140,8 +143,13 @@ function BookingCard({ booking, tab, onView, onBookAgain, onMessageAya }) {
           {rate > 0 && (
             <div className="mb-card-price">
               <span className="mb-card-amount">Rs. {total.toLocaleString()}</span>
-              {!isPast && <span className="mb-card-paystatus">Pending</span>}
-              {isPast && booking.status === 'completed' && <span className="mb-card-paystatus mb-paid">Paid</span>}
+              {payment && (
+                <span className={`mb-card-paystatus${payment.status === 'paid' ? ' mb-paid' : ''}`}>
+                  {payment.status === 'paid' ? 'Paid' : payment.status === 'pending' ? 'Pending' : payment.status === 'processing' ? 'Processing' : payment.status === 'failed' ? 'Failed' : payment.status === 'refunded' ? 'Refunded' : 'Pending'}
+                </span>
+              )}
+              {!payment && !isPast && <span className="mb-card-paystatus">Pending</span>}
+              {!payment && isPast && booking.status === 'completed' && <span className="mb-card-paystatus mb-paid">Paid</span>}
             </div>
           )}
         </div>
@@ -166,13 +174,14 @@ function BookingCard({ booking, tab, onView, onBookAgain, onMessageAya }) {
 /* ═══════════════════════════════════════════════════════
    BOOKING DETAIL MODAL
    ═══════════════════════════════════════════════════════ */
-function BookingDetail({ booking, onClose, onBookAgain, onMessageAya }) {
+function BookingDetail({ booking, onClose, onBookAgain, onMessageAya, payment }) {
   const aya = booking.ayas || {};
   const st = statusStyle(booking.status);
   const time = formatTimeOfDay(booking.time);
-  const endTime = addHoursToTime(booking.time, EST_DURATION);
+  const bkDuration = booking.duration || EST_DURATION;
+  const endTime = addHoursToTime(booking.time, bkDuration);
   const rate = aya.rate_per_hour || 0;
-  const serviceTotal = rate * EST_DURATION;
+  const serviceTotal = rate * bkDuration;
   const tl = timelineState(booking.status);
 
   return (
@@ -206,7 +215,7 @@ function BookingDetail({ booking, onClose, onBookAgain, onMessageAya }) {
             </div>
             <div className="mb-detail-field">
               <span className="mb-detail-flabel">Duration</span>
-              <span className="mb-detail-fvalue">{EST_DURATION} hours</span>
+              <span className="mb-detail-fvalue">{bkDuration} hours</span>
             </div>
             <div className="mb-detail-field">
               <span className="mb-detail-flabel">Care Type</span>
@@ -261,14 +270,34 @@ function BookingDetail({ booking, onClose, onBookAgain, onMessageAya }) {
             <h3 className="mb-detail-label">Payment Summary</h3>
             <div className="mb-pay-box">
               <div className="mb-pay-row"><span>Hourly Rate</span><span>PKR {rate.toLocaleString()}</span></div>
-              <div className="mb-pay-row"><span>Duration</span><span>{EST_DURATION} hours</span></div>
+              <div className="mb-pay-row"><span>Duration</span><span>{bkDuration} hours</span></div>
               <div className="mb-pay-row mb-pay-total"><span>Service Total</span><span>PKR {serviceTotal.toLocaleString()}</span></div>
               <div className="mb-pay-row">
                 <span>Payment Status</span>
-                <span className={booking.status === 'completed' ? 'mb-paid-text' : 'mb-pending-text'}>
-                  {booking.status === 'completed' ? 'Paid' : 'Pending'}
+                <span className={
+                  payment && payment.status === 'paid' ? 'mb-paid-text'
+                  : payment && payment.status === 'failed' ? 'mb-failed-text'
+                  : 'mb-pending-text'
+                }>
+                  {payment ? (
+                    payment.status === 'paid' ? 'Paid'
+                    : payment.status === 'pending' ? 'Pending'
+                    : payment.status === 'processing' ? 'Processing'
+                    : payment.status === 'failed' ? 'Failed'
+                    : payment.status === 'refunded' ? 'Refunded'
+                    : payment.status === 'cancelled' ? 'Cancelled'
+                    : 'Pending'
+                  ) : (
+                    booking.status === 'completed' ? 'Paid' : 'Pending'
+                  )}
                 </span>
               </div>
+              {payment && payment.provider_txn_id && (
+                <div className="mb-pay-row">
+                  <span>Transaction ID</span>
+                  <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>{String(payment.provider_txn_id).substring(0, 8).toUpperCase()}</span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -332,6 +361,24 @@ function EmptyCancelled() {
 function MyBookings({ bookings, loading, profile, onBookAgain, onFindCare, onViewAya }) {
   const [tab, setTab] = useState('upcoming');
   const [detailBooking, setDetailBooking] = useState(null);
+  const [paymentMap, setPaymentMap] = useState({});
+
+  // Load payments for bookings
+  useEffect(() => {
+    if (!profile || !profile.id) return;
+    fetch(`${BACKEND_URL}/api/payments/list/${profile.id}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && Array.isArray(d.payments)) {
+          const map = {};
+          d.payments.forEach((p) => {
+            if (p.booking_id) map[p.booking_id] = p;
+          });
+          setPaymentMap(map);
+        }
+      })
+      .catch(() => { /* payments unavailable */ });
+  }, [profile]);
 
   const todayStr = localDateStr(new Date());
 
@@ -436,6 +483,7 @@ function MyBookings({ bookings, loading, profile, onBookAgain, onFindCare, onVie
                 onView={() => openDetail(b)}
                 onBookAgain={() => handleBookAgain(b)}
                 onMessageAya={() => handleMessageAya(b)}
+                payment={paymentMap[b.id] || null}
               />
             ))}
           </div>
@@ -449,6 +497,7 @@ function MyBookings({ bookings, loading, profile, onBookAgain, onFindCare, onVie
           onClose={closeDetail}
           onBookAgain={() => handleBookAgain(detailBooking)}
           onMessageAya={() => handleMessageAya(detailBooking)}
+          payment={paymentMap[detailBooking.id] || null}
         />
       )}
     </div>
@@ -577,6 +626,7 @@ const MB_CSS = `
 .mb-pay-total{background:${C.tealSoft};}
 .mb-pay-total span{color:${C.navy}!important;font-weight:800!important;font-size:14.5px;}
 .mb-paid-text{color:${C.green}!important;font-weight:800!important;}
+.mb-failed-text{color:#C23B3B!important;font-weight:800!important;}
 .mb-pending-text{color:#9A6B15!important;font-weight:700!important;}
 
 /* Detail actions */

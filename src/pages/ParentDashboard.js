@@ -5,6 +5,7 @@ import BookingFlow from './BookingFlow';
 import FindCare from './FindCare';
 import MyBookings from './MyBookings';
 import MyFamily from './MyFamily';
+import Payments from './Payments';
 import { parseCareRequest, parseTimeOfDay, formatTimeOfDay } from '../utils/parseCareRequest';
 
 /* ═══════════════════════════════════════════════════════
@@ -87,8 +88,7 @@ const NAV = [
 /* Sections that are part of the product direction but not built yet —
    honest placeholders, never fake data. */
 const PLACEHOLDERS = {
-  payments: { title: 'Payments', Icon: Ic.CreditCard, text: 'Payment methods, receipts, and caregiver payouts will be handled here.' },
-  messages: { title: 'Messages', Icon: Ic.MessageCircle, text: 'You’ll be able to chat directly with your caregivers about schedules and daily updates.' },
+  messages: { title: 'Messages', Icon: Ic.MessageCircle, text: 'You will be able to chat directly with your caregivers about schedules and daily updates.' },
 };
 
 const STATUS_STYLES = {
@@ -1114,6 +1114,12 @@ function ParentDashboard() {
             )
             : view === 'family' ? (
               <MyFamily profile={profile} onNavigate={go} />
+            )
+            : view === 'payments' ? (
+              <Payments
+                parentId={profile ? profile.id : null}
+                bookings={bookings}
+              />
             )
             : <PlaceholderView meta={PLACEHOLDERS[view]} onHome={() => go('home')} />}
         </div>
