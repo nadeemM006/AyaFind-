@@ -30,17 +30,11 @@ function ParentDashboard() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            parentNeeds: {
-              childAge: 3,
-              location: 'Lahore',
-              budget: 500,
-            },
+            parentNeeds: { childAge: 3, location: 'Lahore', budget: 500 },
             ayas: data,
           }),
         });
-
         const result = await response.json();
-
         if (result.success && result.rankings.length > 0) {
           const ranked = result.rankings.map((r) =>
             data.find((a) => a.name === r.name)
@@ -110,28 +104,40 @@ function ParentDashboard() {
 
   return (
     <div style={styles.container}>
-      <nav style={styles.nav}>
+      <style>{`
+        @media (max-width: 768px) {
+          .pd-nav { padding: 12px 16px !important; }
+          .pd-header { padding: 28px 16px !important; }
+          .pd-header h2 { font-size: 20px !important; }
+          .pd-content { padding: 16px !important; }
+          .pd-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+          .pd-card { padding: 20px 16px !important; }
+          .pd-welcome { display: none !important; }
+        }
+      `}</style>
+
+      <nav style={styles.nav} className="pd-nav">
         <h1 style={styles.logo}>🍃 AyaFind</h1>
         <div style={styles.navRight}>
-          <span style={styles.welcome}>👋 Welcome, Parent</span>
+          <span style={styles.welcome} className="pd-welcome">👋 Welcome, Parent</span>
           <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
         </div>
       </nav>
 
-      <div style={styles.header}>
+      <div style={styles.header} className="pd-header">
         <h2 style={styles.headerTitle}>Find Your Perfect Aya</h2>
         <p style={styles.headerSub}>AI-matched, verified, and trusted babysitters near you</p>
       </div>
 
-      <div style={styles.content}>
+      <div style={styles.content} className="pd-content">
         {loading ? (
           <p style={styles.loading}>Finding best Ayas for you...</p>
         ) : ayas.length === 0 ? (
           <p style={styles.loading}>No Ayas available right now.</p>
         ) : (
-          <div style={styles.grid}>
+          <div style={styles.grid} className="pd-grid">
             {ayas.map((aya) => (
-              <div key={aya.id} style={styles.card}>
+              <div key={aya.id} style={styles.card} className="pd-card">
                 <div style={styles.avatar}>
                   {aya.name?.charAt(0).toUpperCase()}
                 </div>
@@ -150,9 +156,7 @@ function ParentDashboard() {
                     {aya.ai_summary || 'Generating AI summary...'}
                   </p>
                 </div>
-                <button
-                  style={styles.bookBtn}
-                  onClick={() => handleBook(aya.id)}>
+                <button style={styles.bookBtn} onClick={() => handleBook(aya.id)}>
                   Book Now
                 </button>
               </div>
@@ -169,18 +173,17 @@ const styles = {
   nav: { display: 'flex', justifyContent: 'space-between', alignItems: 'center',
     padding: '16px 40px', background: '#0D7377', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' },
   logo: { color: 'white', margin: 0, fontSize: '22px' },
-  navRight: { display: 'flex', alignItems: 'center', gap: '16px' },
+  navRight: { display: 'flex', alignItems: 'center', gap: '12px' },
   welcome: { color: 'white', fontSize: '14px' },
   logoutBtn: { background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none',
-    padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' },
+    padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' },
   header: { background: 'linear-gradient(135deg, #0D7377, #14BDAC)',
     color: 'white', textAlign: 'center', padding: '40px 20px' },
   headerTitle: { fontSize: '28px', margin: '0 0 8px' },
-  headerSub: { opacity: 0.9, margin: 0 },
+  headerSub: { opacity: 0.9, margin: 0, fontSize: '15px' },
   content: { padding: '32px 40px' },
   loading: { textAlign: 'center', color: '#64748b', fontSize: '18px', marginTop: '40px' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-    gap: '24px' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' },
   card: { background: 'white', borderRadius: '16px', padding: '28px',
     boxShadow: '0 2px 12px rgba(0,0,0,0.08)', textAlign: 'center' },
   avatar: { width: '64px', height: '64px', borderRadius: '50%', background: '#0D7377',
@@ -195,13 +198,10 @@ const styles = {
     marginBottom: '12px', fontSize: '13px', color: '#64748b' },
   aiSummaryBox: { background: '#F0FDF4', borderRadius: '8px',
     padding: '10px 14px', marginBottom: '16px', textAlign: 'left' },
-  aiSummaryLabel: { color: '#0D7377', fontSize: '11px',
-    fontWeight: 'bold', margin: '0 0 4px' },
-  aiSummaryText: { color: '#374151', fontSize: '12px',
-    lineHeight: '1.6', margin: 0 },
+  aiSummaryLabel: { color: '#0D7377', fontSize: '11px', fontWeight: 'bold', margin: '0 0 4px' },
+  aiSummaryText: { color: '#374151', fontSize: '12px', lineHeight: '1.6', margin: 0 },
   bookBtn: { width: '100%', padding: '12px', background: '#0D7377', color: 'white',
-    border: 'none', borderRadius: '8px', fontSize: '15px',
-    fontWeight: 'bold', cursor: 'pointer' },
+    border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' },
 };
 
 export default ParentDashboard;
