@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabase';
 import BookingFlow from './BookingFlow';
 import FindCare from './FindCare';
+import MyBookings from './MyBookings';
 import { parseCareRequest, parseTimeOfDay, formatTimeOfDay } from '../utils/parseCareRequest';
 
 /* ═══════════════════════════════════════════════════════
@@ -85,7 +86,6 @@ const NAV = [
 /* Sections that are part of the product direction but not built yet —
    honest placeholders, never fake data. */
 const PLACEHOLDERS = {
-  bookings: { title: 'My Bookings', Icon: Ic.Calendar, text: 'Your full booking history will live here — upcoming sessions, past care, and statuses in one place.' },
   family: { title: 'My Family', Icon: Ic.Users, text: 'Detailed family profiles, care preferences, and languages will be managed here.' },
   payments: { title: 'Payments', Icon: Ic.CreditCard, text: 'Payment methods, receipts, and caregiver payouts will be handled here.' },
   messages: { title: 'Messages', Icon: Ic.MessageCircle, text: 'You’ll be able to chat directly with your caregivers about schedules and daily updates.' },
@@ -1102,6 +1102,16 @@ function ParentDashboard() {
         <div className="pd-content">
           {view === 'home' ? homeBody
             : view === 'find-care' ? findCareView
+            : view === 'bookings' ? (
+              <MyBookings
+                bookings={bookings}
+                loading={booting}
+                profile={profile}
+                onBookAgain={(aya) => setBookingAya(aya)}
+                onFindCare={() => go('find-care')}
+                onViewAya={() => go('messages')}
+              />
+            )
             : <PlaceholderView meta={PLACEHOLDERS[view]} onHome={() => go('home')} />}
         </div>
       </main>
