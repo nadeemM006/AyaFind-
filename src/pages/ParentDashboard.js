@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 
+const BACKEND_URL = 'https://ayafind-production.up.railway.app';
+
 function ParentDashboard() {
   const [ayas, setAyas] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,8 +23,62 @@ function ParentDashboard() {
       .from('ayas')
       .select('*')
       .eq('is_available', true);
-    if (!error) setAyas(data);
+
+    if (!error && data.length > 0) {
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/match-ayas`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            parentNeeds: {
+              childAge: 3,
+              location: 'Lahore',
+              budget: 500,
+            },
+            ayas: data,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.rankings.length > 0) {
+          const ranked = result.rankings.map((r) =>
+            data.find((a) => a.name === r.name)
+          ).filter(Boolean);
+          setAyas(ranked);
+          ranked.forEach((aya) => fetchAyaSummary(aya));
+        } else {
+          setAyas(data);
+          data.forEach((aya) => fetchAyaSummary(aya));
+        }
+      } catch {
+        setAyas(data);
+        data.forEach((aya) => fetchAyaSummary(aya));
+      }
+    } else {
+      setAyas(data || []);
+    }
     setLoading(false);
+  };
+
+  const fetchAyaSummary = async (aya) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/aya-summary`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aya }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        setAyas((prev) =>
+          prev.map((a) =>
+            a.id === aya.id ? { ...a, ai_summary: result.summary } : a
+          )
+        );
+      }
+    } catch (err) {
+      console.log('Summary error:', err);
+    }
   };
 
   const handleLogout = async () => {
@@ -54,7 +110,6 @@ function ParentDashboard() {
 
   return (
     <div style={styles.container}>
-      {/* Navbar */}
       <nav style={styles.nav}>
         <h1 style={styles.logo}>🍃 AyaFind</h1>
         <div style={styles.navRight}>
@@ -63,13 +118,11 @@ function ParentDashboard() {
         </div>
       </nav>
 
-      {/* Header */}
       <div style={styles.header}>
         <h2 style={styles.headerTitle}>Find Your Perfect Aya</h2>
         <p style={styles.headerSub}>AI-matched, verified, and trusted babysitters near you</p>
       </div>
 
-      {/* Ayas Grid */}
       <div style={styles.content}>
         {loading ? (
           <p style={styles.loading}>Finding best Ayas for you...</p>
@@ -79,26 +132,24 @@ function ParentDashboard() {
           <div style={styles.grid}>
             {ayas.map((aya) => (
               <div key={aya.id} style={styles.card}>
-                {/* Avatar */}
                 <div style={styles.avatar}>
                   {aya.name?.charAt(0).toUpperCase()}
                 </div>
                 <h3 style={styles.ayaName}>{aya.name}</h3>
                 <p style={styles.ayaLocation}>📍 {aya.location}</p>
-
-                {/* Trust Score */}
                 <div style={styles.trustBadge}>
                   🛡️ Trust Score: {aya.trust_score}/100
                 </div>
-
-                {/* Details */}
                 <div style={styles.details}>
                   <span>⏳ {aya.experience_years || 1} yrs exp</span>
                   <span>💰 PKR {aya.rate_per_hour || 500}/hr</span>
                 </div>
-
-                <p style={styles.bio}>{aya.bio || 'Experienced and caring Aya.'}</p>
-
+                <div style={styles.aiSummaryBox}>
+                  <p style={styles.aiSummaryLabel}>🤖 AI Safety Summary</p>
+                  <p style={styles.aiSummaryText}>
+                    {aya.ai_summary || 'Generating AI summary...'}
+                  </p>
+                </div>
                 <button
                   style={styles.bookBtn}
                   onClick={() => handleBook(aya.id)}>
@@ -142,7 +193,12 @@ const styles = {
     display: 'inline-block', marginBottom: '12px' },
   details: { display: 'flex', justifyContent: 'center', gap: '16px',
     marginBottom: '12px', fontSize: '13px', color: '#64748b' },
-  bio: { color: '#64748b', fontSize: '13px', marginBottom: '16px', lineHeight: '1.5' },
+  aiSummaryBox: { background: '#F0FDF4', borderRadius: '8px',
+    padding: '10px 14px', marginBottom: '16px', textAlign: 'left' },
+  aiSummaryLabel: { color: '#0D7377', fontSize: '11px',
+    fontWeight: 'bold', margin: '0 0 4px' },
+  aiSummaryText: { color: '#374151', fontSize: '12px',
+    lineHeight: '1.6', margin: 0 },
   bookBtn: { width: '100%', padding: '12px', background: '#0D7377', color: 'white',
     border: 'none', borderRadius: '8px', fontSize: '15px',
     fontWeight: 'bold', cursor: 'pointer' },
