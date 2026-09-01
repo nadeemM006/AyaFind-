@@ -4,6 +4,7 @@ import { supabase } from '../supabase';
 import BookingFlow from './BookingFlow';
 import FindCare from './FindCare';
 import MyBookings from './MyBookings';
+import MyFamily from './MyFamily';
 import { parseCareRequest, parseTimeOfDay, formatTimeOfDay } from '../utils/parseCareRequest';
 
 /* ═══════════════════════════════════════════════════════
@@ -86,7 +87,6 @@ const NAV = [
 /* Sections that are part of the product direction but not built yet —
    honest placeholders, never fake data. */
 const PLACEHOLDERS = {
-  family: { title: 'My Family', Icon: Ic.Users, text: 'Detailed family profiles, care preferences, and languages will be managed here.' },
   payments: { title: 'Payments', Icon: Ic.CreditCard, text: 'Payment methods, receipts, and caregiver payouts will be handled here.' },
   messages: { title: 'Messages', Icon: Ic.MessageCircle, text: 'You’ll be able to chat directly with your caregivers about schedules and daily updates.' },
 };
@@ -1111,6 +1111,9 @@ function ParentDashboard() {
                 onFindCare={() => go('find-care')}
                 onViewAya={() => go('messages')}
               />
+            )
+            : view === 'family' ? (
+              <MyFamily profile={profile} onNavigate={go} />
             )
             : <PlaceholderView meta={PLACEHOLDERS[view]} onHome={() => go('home')} />}
         </div>
