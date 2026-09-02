@@ -6,6 +6,7 @@ import FindCare from './FindCare';
 import MyBookings from './MyBookings';
 import MyFamily from './MyFamily';
 import Payments from './Payments';
+import Messages from './Messages';
 import { parseCareRequest, parseTimeOfDay, formatTimeOfDay } from '../utils/parseCareRequest';
 
 /* ═══════════════════════════════════════════════════════
@@ -88,7 +89,6 @@ const NAV = [
 /* Sections that are part of the product direction but not built yet —
    honest placeholders, never fake data. */
 const PLACEHOLDERS = {
-  messages: { title: 'Messages', Icon: Ic.MessageCircle, text: 'You will be able to chat directly with your caregivers about schedules and daily updates.' },
 };
 
 const STATUS_STYLES = {
@@ -422,6 +422,7 @@ function ParentDashboard() {
   const [bookingAya, setBookingAya] = useState(null);
   const [detailBooking, setDetailBooking] = useState(null);
   const [childModalOpen, setChildModalOpen] = useState(false);
+  const [activeMessageBookingId, setActiveMessageBookingId] = useState(null);
 
   const assistantRef = useRef(null);
   const aiInputRef = useRef(null);
@@ -720,7 +721,10 @@ function ParentDashboard() {
       key={id}
       type="button"
       className={`pd-navbtn${view === id ? ' active' : ''}`}
-      onClick={() => go(id)}
+      onClick={() => {
+        if (id === 'messages') setActiveMessageBookingId(null);
+        go(id);
+      }}
       aria-current={view === id ? 'page' : undefined}
     >
       <Icon width={18} height={18} />
@@ -1109,7 +1113,10 @@ function ParentDashboard() {
                 profile={profile}
                 onBookAgain={(aya) => setBookingAya(aya)}
                 onFindCare={() => go('find-care')}
-                onViewAya={() => go('messages')}
+                onViewAya={(bookingId) => {
+                  setActiveMessageBookingId(bookingId);
+                  go('messages');
+                }}
               />
             )
             : view === 'family' ? (
@@ -1119,6 +1126,13 @@ function ParentDashboard() {
               <Payments
                 parentId={profile ? profile.id : null}
                 bookings={bookings}
+              />
+            )
+            : view === 'messages' ? (
+              <Messages
+                profile={profile}
+                bookings={bookings}
+                activeBookingId={activeMessageBookingId}
               />
             )
             : <PlaceholderView meta={PLACEHOLDERS[view]} onHome={() => go('home')} />}

@@ -423,7 +423,7 @@ function MyBookings({ bookings, loading, profile, onBookAgain, onFindCare, onVie
   };
   const handleMessageAya = (b) => {
     closeDetail();
-    if (onViewAya) onViewAya(b.ayas);
+    if (onViewAya) onViewAya(b.id);
   };
 
   const currentList = tab === 'upcoming' ? upcoming : tab === 'past' ? past : cancelled;
