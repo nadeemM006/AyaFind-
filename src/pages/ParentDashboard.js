@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabase';
 import BookingFlow from './BookingFlow';
@@ -7,7 +7,8 @@ import MyBookings from './MyBookings';
 import MyFamily from './MyFamily';
 import Payments from './Payments';
 import Messages from './Messages';
-import { parseCareRequest, parseTimeOfDay, formatTimeOfDay } from '../utils/parseCareRequest';
+import AIAssistant from './AIAssistant';
+import { parseTimeOfDay, formatTimeOfDay } from '../utils/parseCareRequest';
 
 /* ═══════════════════════════════════════════════════════
    PARENT DASHBOARD — a personal childcare command center
@@ -75,7 +76,7 @@ const Logo = ({ dark, compact }) => (
 /* ═══════════════════════════════════════════════════════
    NAVIGATION + PLACEHOLDER SECTION META
    ═══════════════════════════════════════════════════════ */
-const VIEWS = ['home', 'find-care', 'bookings', 'family', 'payments', 'messages'];
+const VIEWS = ['home', 'find-care', 'bookings', 'family', 'payments', 'messages', 'ai-assistant'];
 
 const NAV = [
   { id: 'home', label: 'Home', Icon: Ic.Home },
@@ -84,11 +85,21 @@ const NAV = [
   { id: 'family', label: 'My Family', Icon: Ic.Users },
   { id: 'payments', label: 'Payments', Icon: Ic.CreditCard },
   { id: 'messages', label: 'Messages', Icon: Ic.MessageCircle },
+  { id: 'ai-assistant', label: 'AI Assistant', Icon: Ic.Sparkles },
 ];
 
 /* Sections that are part of the product direction but not built yet —
    honest placeholders, never fake data. */
 const PLACEHOLDERS = {
+};
+
+/* Read family data from localStorage (same key as MyFamily) */
+const readFamilyData = (email) => {
+  if (!email) return null;
+  try {
+    const stored = localStorage.getItem(`ayafind_family_${email}`);
+    return stored ? JSON.parse(stored) : null;
+  } catch { return null; }
 };
 
 const STATUS_STYLES = {
@@ -412,22 +423,13 @@ function ParentDashboard() {
   /* Bookings — null while loading */
   const [bookings, setBookings] = useState(null);
 
-  /* AI Care Assistant */
-  const [aiText, setAiText] = useState('');
-  const [aiStatus, setAiStatus] = useState('idle'); /* idle | thinking | done | error */
-  const [aiResults, setAiResults] = useState(null);
-  const [aiError, setAiError] = useState('');
-
   /* Modals */
   const [bookingAya, setBookingAya] = useState(null);
   const [detailBooking, setDetailBooking] = useState(null);
   const [childModalOpen, setChildModalOpen] = useState(false);
   const [activeMessageBookingId, setActiveMessageBookingId] = useState(null);
-
-  const assistantRef = useRef(null);
-  const aiInputRef = useRef(null);
-
-  const chips = useMemo(() => parseCareRequest(aiText).chips, [aiText]);
+  const [familyData, setFamilyData] = useState(null);
+  const [focusAyaId, setFocusAyaId] = useState(null);
 
   /* ── Data loading ─────────────────────────────────── */
 
@@ -519,6 +521,7 @@ function ParentDashboard() {
         if (prof) {
           setProfile(prof);
           loadBookings(prof.id);
+          setFamilyData(readFamilyData(prof.email));
         } else {
           setBookings([]);
         }
@@ -641,14 +644,11 @@ function ParentDashboard() {
     setDrawerOpen(false);
     setSearchParams(next === 'home' ? {} : { view: next }, { replace: true });
     window.scrollTo({ top: 0 });
+    if (next === 'messages') setActiveMessageBookingId(null);
   };
 
   const focusAssistant = () => {
-    if (view !== 'home') go('home');
-    setTimeout(() => {
-      if (assistantRef.current) assistantRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      if (aiInputRef.current) aiInputRef.current.focus({ preventScroll: true });
-    }, 80);
+    go('ai-assistant');
   };
 
   const openChildModal = () => {
@@ -664,54 +664,6 @@ function ParentDashboard() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = '/';
-  };
-
-  /* AI Care Assistant — parse locally, match through the real backend */
-  const runAssistant = async () => {
-    const text = aiText.trim();
-    if (!text || aiStatus === 'thinking') return;
-    if (!ayas.length) {
-      setAiStatus('error');
-      setAiError('No caregivers are available to match right now. Please try again in a moment.');
-      return;
-    }
-    setAiStatus('thinking');
-    setAiError('');
-    setAiResults(null);
-    const parsed = parseCareRequest(text);
-    const parentNeeds = {
-      childAge: parsed.age !== null
-        ? parsed.age
-        : parsed.ageWord || (hasChild ? profile.child_age : ''),
-      location: (profile && profile.location) || '',
-      specialNeeds: parsed.specialNeeds || '',
-      language: parsed.language ? parsed.language.charAt(0).toUpperCase() + parsed.language.slice(1) : '',
-      budget: parsed.budget || '',
-    };
-    try {
-      const rs = await runMatch(parentNeeds, ayas);
-      const rows = rs
-        .map((r) => {
-          if (!r || !r.name) return null;
-          const aya = ayas.find((a) => a.name === r.name);
-          if (!aya) return null;
-          return {
-            aya,
-            reason: typeof r.reason === 'string' ? r.reason : '',
-            score: typeof r.match_score === 'number'
-              ? Math.round(Math.max(0, Math.min(100, r.match_score)))
-              : null,
-          };
-        })
-        .filter(Boolean)
-        .slice(0, 3);
-      if (!rows.length) throw new Error('No matches returned');
-      setAiResults(rows);
-      setAiStatus('done');
-    } catch {
-      setAiStatus('error');
-      setAiError('AyaFind couldn’t complete that request right now. Please try again, or browse all caregivers below.');
-    }
   };
 
   /* ── Navigation + identity ────────────────────────── */
@@ -789,90 +741,17 @@ function ParentDashboard() {
   );
 
   const assistantBlock = (
-    <section className="pd-card pd-assistant pd-section" ref={assistantRef} aria-label="AyaFind Care Assistant">
+    <section className="pd-card pd-assistant pd-section pd-assistant-link" aria-label="AyaFind AI Assistant" role="button" tabIndex={0} onClick={() => go('ai-assistant')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go('ai-assistant'); } }}>
       <div className="pd-assistant-head">
         <span className="pd-assistant-badge"><Ic.Sparkles width={19} height={19} /></span>
         <div>
-          <h2 className="pd-section-title">Tell AyaFind what you need</h2>
-          <p className="pd-section-sub">Describe your childcare needs naturally, and AyaFind will help you find suitable care.</p>
+          <h2 className="pd-section-title">AyaFind AI Assistant</h2>
+          <p className="pd-section-sub">Your personal childcare concierge — find caregivers, check bookings, and more.</p>
         </div>
       </div>
-      <div className="pd-assistant-form">
-        <textarea
-          ref={aiInputRef}
-          className="pd-assistant-input"
-          value={aiText}
-          onChange={(e) => setAiText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-              e.preventDefault();
-              runAssistant();
-            }
-          }}
-          placeholder="e.g. I need an Urdu-speaking Aya for my 3-year-old tomorrow from 6–10 PM."
-          rows={3}
-          aria-label="Describe your childcare needs"
-          disabled={aiStatus === 'thinking'}
-        />
-        {chips.length > 0 && (
-          <div className="pd-chips" aria-label="AyaFind understood">
-            <span className="pd-chips-label"><Ic.CheckCircle width={13} height={13} /> Understood</span>
-            {chips.map((chip) => <span key={chip} className="pd-chip">{chip}</span>)}
-            {profile && profile.location ? (
-              <span className="pd-chip pd-chip-loc"><Ic.MapPin width={12} height={12} /> Near {profile.location}</span>
-            ) : null}
-          </div>
-        )}
-        <div className="pd-assistant-actions">
-          <button
-            type="button"
-            className="pd-btn pd-assistant-btn"
-            onClick={runAssistant}
-            disabled={!aiText.trim() || aiStatus === 'thinking'}
-          >
-            {aiStatus === 'thinking' ? 'Finding care…' : (
-              <>Find Care <Ic.ArrowRight width={15} height={15} /></>
-            )}
-          </button>
-        </div>
+      <div className="pd-assistant-cta">
+        <span className="pd-btn pd-assistant-open-btn">Open AI Assistant <Ic.ArrowRight width={15} height={15} /></span>
       </div>
-      {aiStatus === 'thinking' && (
-        <p className="pd-assistant-status" aria-live="polite">
-          <span className="pd-dot" /><span className="pd-dot" /><span className="pd-dot" />
-          Reading your request and matching caregivers
-        </p>
-      )}
-      {aiStatus === 'error' && (
-        <div className="pd-alert" role="alert">
-          <p>{aiError}</p>
-          <button type="button" className="pd-alert-link" onClick={() => go('find-care')}>
-            Browse all caregivers
-          </button>
-        </div>
-      )}
-      {aiStatus === 'done' && aiResults && (
-        <div className="pd-ai-results">
-          <p className="pd-ai-results-label"><Ic.Sparkles width={13} height={13} /> AyaFind’s top matches</p>
-          {aiResults.map(({ aya, reason, score }) => (
-            <div key={aya.id} className="pd-ai-row">
-              <div className="pd-avatar">{initials(aya.name)}</div>
-              <div className="pd-ai-row-info">
-                <p className="pd-ai-row-name">
-                  {aya.name}
-                  {score != null && (
-                    <span className="pd-match"><Ic.CheckCircle width={12} height={12} /> {score}% match</span>
-                  )}
-                </p>
-                <p className="pd-ai-row-why">{reason || whyFor(aya)}</p>
-              </div>
-              <button type="button" className="pd-btn-ghost" onClick={() => setBookingAya(aya)}>Book Now</button>
-            </div>
-          ))}
-          <button type="button" className="pd-textbtn" onClick={() => go('find-care')}>
-            See all caregivers <Ic.ArrowRight width={13} height={13} />
-          </button>
-        </div>
-      )}
     </section>
   );
 
@@ -887,8 +766,8 @@ function ParentDashboard() {
     <section className="pd-card pd-empty pd-section" aria-label="Upcoming care">
       <div className="pd-empty-icon"><Ic.CalendarCheck width={22} height={22} /></div>
       <h2 className="pd-section-title">No upcoming care</h2>
-      <p className="pd-section-sub">Need an Aya? Tell AyaFind what you’re looking for.</p>
-      <button type="button" className="pd-btn" onClick={focusAssistant}>Find Care</button>
+      <p className="pd-section-sub">Need an Aya? Ask the AyaFind AI Assistant.</p>
+      <button type="button" className="pd-btn" onClick={() => go('ai-assistant')}>Find Care</button>
     </section>
   );
 
@@ -1081,6 +960,8 @@ function ParentDashboard() {
       profile={profile}
       profileLoading={booting}
       onBook={(aya) => setBookingAya(aya)}
+      focusAyaId={focusAyaId}
+      onFocusConsumed={() => setFocusAyaId(null)}
     />
   );
 
@@ -1103,7 +984,7 @@ function ParentDashboard() {
       </header>
 
       <main className="pd-main">
-        <div className="pd-content">
+        <div className={`pd-content${view === 'ai-assistant' ? ' pd-content-full' : ''}`}>
           {view === 'home' ? homeBody
             : view === 'find-care' ? findCareView
             : view === 'bookings' ? (
@@ -1133,6 +1014,20 @@ function ParentDashboard() {
                 profile={profile}
                 bookings={bookings}
                 activeBookingId={activeMessageBookingId}
+              />
+            )
+            : view === 'ai-assistant' ? (
+              <AIAssistant
+                profile={profile}
+                bookings={bookings}
+                ayas={ayas}
+                familyData={familyData}
+                onNavigate={(page) => go(page)}
+                onBookAya={(caregiver) => setBookingAya(caregiver)}
+                onViewProfile={(caregiver) => {
+                  setFocusAyaId(caregiver.id);
+                  go('find-care');
+                }}
               />
             )
             : <PlaceholderView meta={PLACEHOLDERS[view]} onHome={() => go('home')} />}
@@ -1200,6 +1095,7 @@ const PD_CSS = `
 .pd-topbar{display:none;}
 .pd-main{margin-left:264px;min-height:100vh;display:flex;flex-direction:column;}
 .pd-content{width:100%;max-width:1180px;margin:0 auto;padding:34px 40px 64px;flex:1;}
+.pd-content-full{padding:0!important;max-width:none!important;}
 .pd-overlay{position:fixed;inset:0;background:rgba(17,27,46,0.55);z-index:60;opacity:0;visibility:hidden;transition:opacity .25s ease,visibility .25s;}
 .pd-overlay.pd-show{opacity:1;visibility:visible;}
 .pd-drawer{position:fixed;top:0;left:0;bottom:0;width:284px;max-width:86vw;background:${C.navy};display:flex;flex-direction:column;padding:18px 14px;z-index:70;transform:translateX(-102%);visibility:hidden;transition:transform .28s cubic-bezier(.4,0,.2,1),visibility .28s;}
@@ -1246,6 +1142,10 @@ const PD_CSS = `
 
 /* AI Care Assistant — the centerpiece */
 .pd-assistant{padding:24px;border-top:3px solid ${C.teal};box-shadow:0 10px 34px rgba(39,143,135,0.1);animation:pdFadeUp .4s .05s ease both;}
+.pd-assistant-link{cursor:pointer;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;}
+.pd-assistant-link:hover{transform:translateY(-2px);box-shadow:0 14px 40px rgba(39,143,135,0.16);border-color:rgba(39,143,135,0.3);}
+.pd-assistant-link:focus-visible{outline:2px solid ${C.teal};outline-offset:2px;}
+.pd-assistant-cta{display:flex;align-items:center;margin-top:14px;}
 .pd-assistant-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px;}
 .pd-assistant-badge{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;background:${C.tealSoft};color:${C.teal};flex-shrink:0;}
 .pd-assistant-form{display:flex;flex-direction:column;gap:12px;}

@@ -95,7 +95,7 @@ const rateLabel = (a) => a && a.rate_per_hour != null && a.rate_per_hour !== '' 
 /* ═══════════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════ */
-function FindCare({ ayas: propAyas, rankings, profile, profileLoading, onBook }) {
+function FindCare({ ayas: propAyas, rankings, profile, profileLoading, onBook, focusAyaId, onFocusConsumed }) {
   const [step, setStep] = useState('input'); // input | requirements | loading | results | empty
   const [requestText, setRequestText] = useState('');
   const [parsed, setParsed] = useState(null);
@@ -123,6 +123,17 @@ function FindCare({ ayas: propAyas, rankings, profile, profileLoading, onBook })
       } catch { setAllAyas(DEMO_CAREGIVERS); }
     })();
   }, [propAyas]);
+
+  // Open a specific caregiver profile when focused from the AI Assistant
+  useEffect(() => {
+    if (!focusAyaId || !allAyas.length) return;
+    const aya = allAyas.find((a) => a.id === focusAyaId);
+    if (aya) {
+      setSelectedAya({ aya });
+      setViewStep('profile');
+    }
+    if (onFocusConsumed) onFocusConsumed();
+  }, [focusAyaId, allAyas, onFocusConsumed]);
 
   // Compute filter options
   useEffect(() => {
