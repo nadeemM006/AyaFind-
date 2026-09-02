@@ -1,4 +1,4 @@
-import { parseCareRequest, parseTimeOfDay, formatTimeOfDay } from './parseCareRequest';
+import { parseCareRequest, parseTimeOfDay, formatTimeOfDay, formatTimeRange } from './parseCareRequest';
 
 describe('parseTimeOfDay / formatTimeOfDay', () => {
   test('parses "8:14:15 AM" (12h with seconds)', () => {
@@ -26,6 +26,30 @@ describe('parseTimeOfDay / formatTimeOfDay', () => {
     expect(formatTimeOfDay('later')).toBeNull();
     expect(formatTimeOfDay('')).toBeNull();
     expect(formatTimeOfDay(null)).toBeNull();
+  });
+});
+
+describe('formatTimeRange', () => {
+  test('start time plus whole-hour duration', () => {
+    expect(formatTimeRange('5:00 PM', 4)).toBe('5:00 PM – 9:00 PM');
+  });
+
+  test('24h stored time with seconds', () => {
+    expect(formatTimeRange('14:00:00', 2)).toBe('2:00 PM – 4:00 PM');
+  });
+
+  test('range crossing midnight wraps', () => {
+    expect(formatTimeRange('11:00 PM', 4)).toBe('11:00 PM – 3:00 AM');
+  });
+
+  test('missing or zero duration returns the start time only', () => {
+    expect(formatTimeRange('6:00 PM')).toBe('6:00 PM');
+    expect(formatTimeRange('6:00 PM', 0)).toBe('6:00 PM');
+  });
+
+  test('unparseable time returns null', () => {
+    expect(formatTimeRange('flexible', 4)).toBeNull();
+    expect(formatTimeRange(null, 4)).toBeNull();
   });
 });
 

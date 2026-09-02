@@ -40,6 +40,24 @@ export function formatTimeOfDay(raw) {
   return `${h12}:${String(min).padStart(2, '0')} ${h24 >= 12 ? 'PM' : 'AM'}`;
 }
 
+/* Format a stored start time plus a duration (hours) as a display
+   range, e.g. ("5:00 PM", 4) → "5:00 PM – 9:00 PM". Ranges that cross
+   midnight wrap (11 PM + 4 hrs → 3:00 AM). With no usable duration it
+   returns the start time alone; unparseable times return null. */
+export function formatTimeRange(raw, durationHours) {
+  const startLabel = formatTimeOfDay(raw);
+  if (startLabel === null) return null;
+  const start = parseTimeOfDay(raw);
+  const hours = Number(durationHours);
+  if (!Number.isFinite(hours) || hours <= 0) return startLabel;
+  const end = (start + Math.round(hours * 60)) % 1440;
+  const h24 = Math.floor(end / 60);
+  const min = end % 60;
+  let h12 = h24 % 12;
+  if (h12 === 0) h12 = 12;
+  return `${startLabel} – ${h12}:${String(min).padStart(2, '0')} ${h24 >= 12 ? 'PM' : 'AM'}`;
+}
+
 /* Format an hour/minute pair with an optional meridiem ("pm") */
 const fmtClock = (h, min, mer) => {
   if (!mer) return `${h}:${String(min).padStart(2, '0')}`;
