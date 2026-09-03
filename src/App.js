@@ -5,6 +5,7 @@ import Register from './pages/Register';
 import Login from './pages/Login';
 import ParentDashboard from './pages/ParentDashboard';
 import AyaDashboard from './pages/AyaDashboard';
+import AyaCareRequests from './pages/AyaCareRequests';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/parent-dashboard" element={<ParentDashboard />} />
         <Route path="/aya-dashboard" element={<AyaDashboard />} />
+        <Route path="/aya-dashboard/care-requests" element={<AyaCareRequests />} />
       </Routes>
     </Router>
   );

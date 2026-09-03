@@ -31,6 +31,7 @@ const Ic = {
   MapPin: (p) => <svg {...sv} {...p}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>,
   Banknote: (p) => <svg {...sv} {...p}><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01"/><path d="M18 12h.01"/></svg>,
   X: (p) => <svg {...sv} {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  ChevronRight: (p) => <svg {...sv} {...p}><polyline points="9 18 15 12 9 6"/></svg>,
   LogOut: (p) => <svg {...sv} {...p}><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
   Sparkles: (p) => <svg {...sv} {...p}><path d="M12 3l1.9 5.8a2 2 0 001.3 1.3L21 12l-5.8 1.9a2 2 0 00-1.3 1.3L12 21l-1.9-5.8a2 2 0 00-1.3-1.3L3 12l5.8-1.9a2 2 0 001.3-1.3L12 3z"/><path d="M5 3v4"/><path d="M3 5h4"/><path d="M19 17v4"/><path d="M17 19h4"/></svg>,
   RefreshCw: (p) => <svg {...sv} {...p}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>,
@@ -808,6 +809,9 @@ function AyaDashboard() {
         {requests && requests.length > 0 && (
           <span className="ad-count">{requests.length} new</span>
         )}
+        <a className="ad-viewall" href="/aya-dashboard/care-requests">
+          View all <Ic.ChevronRight width={13} height={13} />
+        </a>
       </div>
       {requests === null ? (
         <div className="ad-card ad-skel-card">
@@ -1058,6 +1062,9 @@ const AD_CSS = `
 .ad-section-title{font-size:16.5px;font-weight:800;color:${C.text};letter-spacing:-0.01em;}
 .ad-section-sub{font-size:14px;color:${C.textSec};line-height:1.55;}
 .ad-count{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;background:${C.tealSoft};color:#1F7A73;font-size:11.5px;font-weight:800;}
+.ad-viewall{display:inline-flex;align-items:center;gap:5px;margin-left:auto;padding:7px 13px;border-radius:9px;background:#fff;border:1px solid ${C.border};color:${C.teal};font-size:12.5px;font-weight:800;text-decoration:none;transition:border-color .18s ease,background .18s ease;}
+.ad-viewall:hover{border-color:${C.teal};background:${C.tealSoft};}
+.ad-viewall svg{flex-shrink:0;}
 .ad-card{background:#fff;border:1px solid ${C.border};border-radius:14px;box-shadow:0 1px 2px rgba(23,36,61,0.04);}
 
 /* Buttons */
